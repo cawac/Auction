@@ -1,0 +1,145 @@
+version: '3.8'
+services:
+  bidding-db:
+    image: postgres:15
+    container_name: bidding-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bidding
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./bidding_data:/var/lib/postgresql/data
+
+  bidding-service:
+    build: 
+      context: ./bidding-service
+    volumes:
+      - ./bidding-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@bidding-db:5432/bidding
+    ports:
+      - "8001:8000"
+    depends_on:
+      - bidding-db
+
+  items-db:
+    image: postgres:15
+    container_name: items-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: items
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./items_data:/var/lib/postgresql/data
+
+  items-service:
+    build: 
+      context: ./items-service
+    volumes:
+      - ./items-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@items-db:5432/items
+    ports:
+      - "8002:8000"
+    depends_on:
+      - items-db
+
+  transactions-db:
+    image: postgres:15
+    container_name: transactions-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: transactions
+    ports:
+      - "5435:5432"
+    volumes:
+      - ./transactions_data:/var/lib/postgresql/data
+
+  transactions-service:
+    build:
+      context: ./transactions-service
+    volumes:
+      - ./transactions-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@transactions-db:5432/transactions
+    ports:
+      - "8003:8000"
+    depends_on:
+      - transactions-db
+
+  notifications-db:
+    image: postgres:15
+    container_name: notifications-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: notifications
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./notifications_data:/var/lib/postgresql/data
+
+  notifications-service:
+    build:
+      context: ./notifications-service
+    volumes:
+      - ./notifications-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@notifications-db:5432/notifications
+    ports:
+      - "8004:8000"
+    depends_on:
+      - notifications-db
+
+  auth-db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth
+    ports:
+      - "5437:5432"
+    volumes:
+      - ./auth_data:/var/lib/postgresql/data
+
+  auth-service:
+    build: 
+      context: ./auth-service
+    volumes:
+      - ./auth-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@auth-db:5432/auth
+    ports:
+      - "8005:8000"
+    depends_on:
+      - auth-db
+
+  auction-db:
+    image: postgres:15
+    container_name: auction-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auction
+    ports:
+      - "5438:5432"
+    volumes:
+      - ./auction_data:/var/lib/postgresql/data
+
+  auction-service:
+    build:
+      context: ./auction-service
+    volumes:
+      - ./auction-service:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@auction-db:5432/auction
+    ports:
+      - "8006:8000"
+    depends_on:
+      - auction-db

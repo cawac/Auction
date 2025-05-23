@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# Virtual environments
+env/
+venv/
+ENV/
+VENV/
+
+# VSCode
+.vscode/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Pytest
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Pip
+pip-log.txt
+
+# Coverage
+htmlcov/
+.coverage
+.tox/
+
+# Build
+build/
+dist/
+.eggs/
+*.egg-info/ 
