@@ -11,6 +11,12 @@ services:
       - "5433:5432"
     volumes:
       - ./bidding_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   bidding-service:
     build: 
@@ -22,7 +28,14 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      - bidding-db
+      bidding-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   items-db:
     image: postgres:15
@@ -35,6 +48,12 @@ services:
       - "5434:5432"
     volumes:
       - ./items_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   items-service:
     build: 
@@ -46,7 +65,14 @@ services:
     ports:
       - "8002:8000"
     depends_on:
-      - items-db
+      items-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   transactions-db:
     image: postgres:15
@@ -59,6 +85,12 @@ services:
       - "5435:5432"
     volumes:
       - ./transactions_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   transactions-service:
     build:
@@ -70,7 +102,14 @@ services:
     ports:
       - "8003:8000"
     depends_on:
-      - transactions-db
+      transactions-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   notifications-db:
     image: postgres:15
@@ -83,6 +122,12 @@ services:
       - "5436:5432"
     volumes:
       - ./notifications_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   notifications-service:
     build:
@@ -94,7 +139,14 @@ services:
     ports:
       - "8004:8000"
     depends_on:
-      - notifications-db
+      notifications-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   auth-db:
     image: postgres:15
@@ -107,6 +159,12 @@ services:
       - "5437:5432"
     volumes:
       - ./auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   auth-service:
     build: 
@@ -118,7 +176,14 @@ services:
     ports:
       - "8005:8000"
     depends_on:
-      - auth-db
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   auction-db:
     image: postgres:15
@@ -131,6 +196,12 @@ services:
       - "5438:5432"
     volumes:
       - ./auction_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   auction-service:
     build:
@@ -142,4 +213,11 @@ services:
     ports:
       - "8006:8000"
     depends_on:
-      - auction-db
+      auction-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
