@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from .models.notification import Base, Notification, NotificationType
 from .schemas.notification import Notification as NotificationSchema, NotificationCreate
 from .sqlalchemy_conn import engine, get_db
 import time
 import logging
+from sqlalchemy.sql import func
 
 
 time.sleep(5)
@@ -140,3 +141,28 @@ def notify_item_sold(
     
     db.commit()
     return {"status": "Notifications sent"}
+
+@app.get("/metrics")
+def get_notification_metrics(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
+    one_month_ago = now - timedelta(days=30)
+    one_year_ago = now - timedelta(days=365)
+
+    total_notifications = db.query(Notification).count()
+    read_count = db.query(Notification).filter(Notification.is_read == True).count()
+    unread_count = db.query(Notification).filter(Notification.is_read == False).count()
+    sent_today = db.query(Notification).filter(Notification.created_at >= one_day_ago).count()
+    sent_week = db.query(Notification).filter(Notification.created_at >= one_week_ago).count()
+    sent_month = db.query(Notification).filter(Notification.created_at >= one_month_ago).count()
+    sent_year = db.query(Notification).filter(Notification.created_at >= one_year_ago).count()
+    return {
+        "total_notifications": total_notifications,
+        "read_notifications": read_count,
+        "unread_notifications": unread_count,
+        "sent_today": sent_today,
+        "sent_last_week": sent_week,
+        "sent_last_month": sent_month,
+        "sent_last_year": sent_year,
+    }

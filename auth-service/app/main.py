@@ -5,6 +5,8 @@ from .schemas.user import UserOut, UserCreate
 from .sqlalchemy_conn import Base, engine, get_db
 import time
 import logging
+from sqlalchemy.sql import func
+from datetime import datetime, timedelta
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -77,3 +79,18 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(db_user)
     db.commit()
     return None
+
+@app.get("/metrics")
+def get_user_metrics(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
+    one_month_ago = now - timedelta(days=30)
+    one_year_ago = now - timedelta(days=365)
+
+    total_users = db.query(User).count()
+    # If created_at field is available, add time-based metrics
+    return {
+        "total_users": total_users,
+        # Add time-based metrics if created_at exists
+    }

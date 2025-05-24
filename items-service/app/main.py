@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from .sqlalchemy_conn import engine, get_db
 import time
 import logging
+from sqlalchemy.sql import func
+from datetime import datetime, timedelta
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -74,3 +76,21 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 @app.get("/items/category/{category_id}", response_model=list[ItemSchema])
 def get_category_items(category_id: int, db: Session = Depends(get_db)):
     return db.query(Item).filter(Item.category_id == category_id).all()
+
+@app.get("/metrics")
+def get_item_metrics(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
+    one_month_ago = now - timedelta(days=30)
+    one_year_ago = now - timedelta(days=365)
+
+    total_items = db.query(Item).count()
+    # Items per category
+    by_category = db.query(Item.category_id, func.count()).group_by(Item.category_id).all()
+    # Items created in time periods (assuming no created_at, so skip these if not available)
+    return {
+        "total_items": total_items,
+        "items_per_category": {str(cat): count for cat, count in by_category},
+        # If created_at field is added, add time-based metrics here
+    }

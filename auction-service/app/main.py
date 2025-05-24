@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
+from sqlalchemy.sql import func
 from .models.auction import Base, Auction as AuctionModel, AuctionStatus
 from .schemas.auction import Auction as AuctionSchema, AuctionStatus as AuctionStatusSchema, AuctionCreate
 from .sqlalchemy_conn import engine, get_db
@@ -151,3 +152,38 @@ def update_current_price(auction_id: int, data: dict = Body(...), db: Session = 
     db.commit()
     db.refresh(auction)
     return auction
+
+@app.get("/metrics")
+def get_auction_metrics(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
+    one_month_ago = now - timedelta(days=30)
+    one_year_ago = now - timedelta(days=365)
+
+    total_auctions = db.query(AuctionModel).count()
+    by_status = db.query(AuctionModel.status, func.count()).group_by(AuctionModel.status).all()
+    avg_starting_price = db.query(func.coalesce(func.avg(AuctionModel.starting_price), 0)).scalar()
+    avg_current_price = db.query(func.coalesce(func.avg(AuctionModel.current_price), 0)).scalar()
+    started_day = db.query(AuctionModel).filter(AuctionModel.start_time >= one_day_ago and AuctionModel.status == AuctionStatus.Active).count()
+    started_week = db.query(AuctionModel).filter(AuctionModel.start_time >= one_week_ago and AuctionModel.status == AuctionStatus.Active).count()
+    started_month = db.query(AuctionModel).filter(AuctionModel.start_time >= one_month_ago and AuctionModel.status == AuctionStatus.Active).count()
+    started_year = db.query(AuctionModel).filter(AuctionModel.start_time >= one_year_ago and AuctionModel.status == AuctionStatus.Active).count()
+    ended_day = db.query(AuctionModel).filter(AuctionModel.end_date >= one_day_ago and AuctionModel.status == AuctionStatus.Closed).count()
+    ended_week = db.query(AuctionModel).filter(AuctionModel.end_date >= one_week_ago and AuctionModel.status == AuctionStatus.Closed).count()
+    ended_month = db.query(AuctionModel).filter(AuctionModel.end_date >= one_month_ago and AuctionModel.status == AuctionStatus.Closed).count()
+    ended_year = db.query(AuctionModel).filter(AuctionModel.end_date >= one_year_ago and AuctionModel.status == AuctionStatus.Closed).count()
+    return {
+        "total_auctions": total_auctions,
+        "status_distribution": {status.value: count for status, count in by_status},
+        "avg_starting_price": avg_starting_price,
+        "avg_current_price": avg_current_price,
+        "auctions_started_today": started_day,
+        "auctions_started_last_week": started_week,
+        "auctions_started_last_month": started_month,
+        "auctions_started_last_year": started_year,
+        "auctions_ended_today": ended_day,
+        "auctions_ended_last_week": ended_week,
+        "auctions_ended_last_month": ended_month,
+        "auctions_ended_last_year": ended_year,
+    }

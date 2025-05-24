@@ -19,10 +19,7 @@ VENV/
 *.log
 docker-compose.override.yml
 
-# Environment files
-.env
-.env.*
-*.env
+
 
 # Pytest
 .cache/

@@ -8,6 +8,7 @@ from .sqlalchemy_conn import engine, get_db
 import time
 import requests
 import logging
+from sqlalchemy.sql import func
 
 time.sleep(5)
 Base.metadata.create_all(bind=engine)
@@ -121,3 +122,30 @@ def get_highest_bid(auction_id: int, db: Session = Depends(get_db)):
     if not highest_bid:
         raise HTTPException(status_code=404, detail="No bids found for this auction")
     return highest_bid
+
+@app.get("/metrics")
+def get_bid_metrics(db: Session = Depends(get_db)):
+    now = datetime.datetime.utcnow()
+    one_day_ago = now - datetime.timedelta(days=1)
+    one_week_ago = now - datetime.timedelta(weeks=1)
+    one_month_ago = now - datetime.timedelta(days=30)
+    one_year_ago = now - datetime.timedelta(days=365)
+
+    total_bids = db.query(Bid).count()
+    avg_bid = db.query(func.coalesce(func.avg(Bid.bid_amount), 0)).scalar()
+    min_bid = db.query(func.coalesce(func.min(Bid.bid_amount), 0)).scalar()
+    max_bid = db.query(func.coalesce(func.max(Bid.bid_amount), 0)).scalar()
+    bids_today = db.query(Bid).filter(Bid.bid_time >= one_day_ago).count()
+    bids_week = db.query(Bid).filter(Bid.bid_time >= one_week_ago).count()
+    bids_month = db.query(Bid).filter(Bid.bid_time >= one_month_ago).count()
+    bids_year = db.query(Bid).filter(Bid.bid_time >= one_year_ago).count()
+    return {
+        "total_bids": total_bids,
+        "avg_bid_amount": avg_bid,
+        "min_bid_amount": min_bid,
+        "max_bid_amount": max_bid,
+        "bids_today": bids_today,
+        "bids_last_week": bids_week,
+        "bids_last_month": bids_month,
+        "bids_last_year": bids_year,
+    }

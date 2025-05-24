@@ -15,6 +15,7 @@ class TransactionBase(BaseModel):
     buyer_id: int
     transaction_date: datetime
     status: TransactionStatus
+    amount: float
     class Config:
         from_attributes = True 
 

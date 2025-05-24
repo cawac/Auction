@@ -19,3 +19,4 @@ class Transaction(Base):
     buyer_id = Column(Integer, nullable=False)
     transaction_date = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     status = Column(Enum(TransactionStatus), nullable=False)
+    amount = Column(Float, nullable=False)

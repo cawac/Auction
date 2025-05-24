@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime
+from sqlalchemy.sql import func
+from datetime import datetime, timedelta
 from typing import List
 from .models.transaction import Base, Transaction, TransactionStatus
 from .schemas.transaction import TransactionSchema, TransactionCreate as TransactionCreateSchema, TransactionBase, TransactionStatus as TransactionStatusSchema
@@ -29,7 +30,8 @@ def create_transaction(transaction: TransactionCreateSchema, db: Session = Depen
         auction_id=transaction.auction_id,
         buyer_id=transaction.buyer_id,
         transaction_date=datetime.utcnow(),
-        status=TransactionStatus.Pending
+        status=TransactionStatus.Pending,
+        amount=transaction.amount
     )
     db.add(new_transaction)
     db.commit()
@@ -91,36 +93,6 @@ def confirm_payment(transaction_id: int, db: Session = Depends(get_db)):
     
     return transaction
 
-@app.put("/transactions/{transaction_id}/refund", response_model=TransactionSchema)
-def process_refund(transaction_id: int, reason: str, db: Session = Depends(get_db)):
-    transaction = db.query(Transaction).filter(Transaction.transaction_id == transaction_id).first()
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    if transaction.status != TransactionStatus.Completed:
-        raise HTTPException(status_code=400, detail="Only completed transactions can be refunded")
-    
-    transaction.status = TransactionStatus.Refunded
-    db.commit()
-    db.refresh(transaction)
-    
-    # Notify users about refund
-    try:
-        requests.post(
-            "http://notifications-service:8000/notifications",
-            json={
-                "user_id": transaction.buyer_id,
-                "type": "REFUND_PROCESSED",
-                "message": f"Refund for auction #{transaction.auction_id} has been processed. Reason: {reason}",
-                "meta": {"transaction_id": transaction.transaction_id}
-            }
-        )
-    except:
-        # Log error but continue
-        pass
-    
-    return transaction
-
 @app.get("/transactions/auction/{auction_id}", response_model=List[TransactionSchema])
 def get_auction_transactions(auction_id: int, db: Session = Depends(get_db)):
     transactions = db.query(Transaction).filter(Transaction.auction_id == auction_id).all()
@@ -133,3 +105,58 @@ def get_user_transactions(user_id: int, db: Session = Depends(get_db)):
         (Transaction.buyer_id == user_id) | (Transaction.seller_id == user_id)
     ).all()
     return transactions
+
+@app.get("/metrics")
+def get_payment_metrics(db: Session = Depends(get_db)):
+    now = datetime.utcnow()
+    one_day_ago = now - timedelta(days=1)
+    one_week_ago = now - timedelta(weeks=1)
+    one_month_ago = now - timedelta(days=30)
+    one_year_ago = now - timedelta(days=365)
+
+    total_payments = db.query(Transaction).count()
+    by_status = db.query(Transaction.status, func.count()).group_by(Transaction.status).all()
+
+    # Time-based metrics
+    count_day = db.query(Transaction).filter(Transaction.transaction_date >= one_day_ago).count()
+    count_week = db.query(Transaction).filter(Transaction.transaction_date >= one_week_ago).count()
+    count_month = db.query(Transaction).filter(Transaction.transaction_date >= one_month_ago).count()
+    count_year = db.query(Transaction).filter(Transaction.transaction_date >= one_year_ago).count()
+
+    # Amount-based metrics
+    total_amount = db.query(func.coalesce(func.sum(Transaction.amount), 0)).scalar()
+    avg_amount = db.query(func.coalesce(func.avg(Transaction.amount), 0)).scalar()
+    min_amount = db.query(func.coalesce(func.min(Transaction.amount), 0)).scalar()
+    max_amount = db.query(func.coalesce(func.max(Transaction.amount), 0)).scalar()
+
+    # Period-based amount metrics
+    amount_today = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_day_ago).scalar()
+    amount_week = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_week_ago).scalar()
+    amount_month = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_month_ago).scalar()
+    amount_year = db.query(func.coalesce(func.sum(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_year_ago).scalar()
+
+    avg_amount_today = db.query(func.coalesce(func.avg(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_day_ago).scalar()
+    avg_amount_week = db.query(func.coalesce(func.avg(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_week_ago).scalar()
+    avg_amount_month = db.query(func.coalesce(func.avg(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_month_ago).scalar()
+    avg_amount_year = db.query(func.coalesce(func.avg(Transaction.amount), 0)).filter(Transaction.transaction_date >= one_year_ago).scalar()
+
+    return {
+        "total_payments": total_payments,
+        "payments_today": count_day,
+        "payments_last_week": count_week,
+        "payments_last_month": count_month,
+        "payments_last_year": count_year,
+        "status_distribution": {status.value: count for status, count in by_status},
+        "total_amount": total_amount,
+        "avg_amount": avg_amount,
+        "min_amount": min_amount,
+        "max_amount": max_amount,
+        "amount_today": amount_today,
+        "amount_last_week": amount_week,
+        "amount_last_month": amount_month,
+        "amount_last_year": amount_year,
+        "avg_amount_today": avg_amount_today,
+        "avg_amount_last_week": avg_amount_week,
+        "avg_amount_last_month": avg_amount_month,
+        "avg_amount_last_year": avg_amount_year,
+    }
